@@ -164,17 +164,17 @@
   (keys [this]
         (keys m)))
 
-(defn ->activators
-  ([& keys-and-activators]
-   (if (and (map? (first keys-and-activators))
-            (= 1 (count keys-and-activators)))
-     (Activators. (first keys-and-activators))
-     (reduce
-       (fn [as [k v]] (assoc as k v))
-       (Activators. {})
-       (partition 2 keys-and-activators)))))
+(def empty-activators (Activators. {}))
 
-(def empty-activators (->activators))
+(defn ->activators
+  ([] empty-activators)
+  ([m]
+   (Activators. m))
+  ([k activator & keys-and-activators]
+   (reduce
+     (fn [as [k v]] (assoc as k v))
+     (assoc (Activators. {}) k activator)
+     (partition 2 keys-and-activators))))
 
 ; Container
 ; ==================================
