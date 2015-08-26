@@ -266,7 +266,6 @@
 
     @close-called-with => ["hello world" "hello"]))
 
-(future-fact "Destructors in parent container activator")
 
 ; Activation using IDeref
 ; ==================================
