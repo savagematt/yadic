@@ -243,7 +243,30 @@
 
     (:a child-container) => "hello world!!!"))
 
-(future-fact "Destructors still get called on decorated activators")
+(fact "Destructors still get called on decorated activators"
+  (let [close-called-with (atom [])
+        activators            (-> (->activators
+                                    :a (reify
+                                         Activator
+                                         (activate [this container]
+                                           "hello")
+                                         (close [this instance]
+                                           (swap! close-called-with conj instance))))
+                                  (decorate :a (reify
+                                                 Activator
+                                                 (activate [this {:keys [a]}]
+                                                   (str a " world"))
+                                                 (close [this instance]
+                                                   (swap! close-called-with conj instance)))))
+        container             (->container activators)]
+
+    (:a container) => "hello world"
+
+    (.close container)
+
+    @close-called-with => ["hello world" "hello"]))
+
+(future-fact "Destructors in parent container activator")
 
 ; Activation using IDeref
 ; ==================================
