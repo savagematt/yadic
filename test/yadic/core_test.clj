@@ -71,7 +71,7 @@
 
 (fact "There's a handy macro for creating functions activators"
   (-> (->activators :a (act [b] (str "hello " b))
-        :b (constantly "world"))
+                    :b (constantly "world"))
       (->container)
       (:a)) => "hello world")
 
@@ -94,7 +94,7 @@
 
 (fact "Keys include parent container keys"
   (let [parent-container (->container (->activators :a (constantly "a")
-                                        :b (constantly "b")))
+                                                    :b (constantly "b")))
         child-container  (->container parent-container (->activators :b (constantly "b")))]
     (keys child-container) => (contains #{:a :b} :in-any-order)))
 
