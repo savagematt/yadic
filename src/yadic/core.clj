@@ -128,6 +128,13 @@
               (str "No constructor of " c " takes " (count parameter-keys) " parameters for keys " parameter-keys))))
    (ClassActivator. c parameter-keys)))
 
+; Concrete value
+; ----------------------------------
+
+
+(defn concrete [instance]
+  (fn->activator (constantly instance) []))
+
 ; Conversion to activators
 ; ----------------------------------
 
