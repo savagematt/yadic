@@ -175,3 +175,36 @@
    (assert (map? parent-container) (str "Not a map " parent-container))
    (assert (map? activators) (str "Not a map " activators))
    (Container. parent-container activators (atom {:instances {}}))))
+
+
+(defn- decorating-activator* [k old-activator new-activator]
+  (fn [container]
+    (let [activators-with-old-activator (->activators k old-activator)
+          old-activator-container       (->container container activators-with-old-activator)]
+
+      (activate (as-activator new-activator) old-activator-container))))
+
+(defn- decorating-activator-from-parent* [k parent-container new-activator]
+  (fn [container]
+    (let [activators-with-old-activator (->activators k (fn [_] (get parent-container k)))
+          old-activator-container       (->container container activators-with-old-activator)]
+
+      (activate (as-activator new-activator) old-activator-container))))
+
+(defn decorate
+  ([activators k activator-that-depends-on-original-value]
+   (let [old-activator (activators k)]
+
+     (when-not old-activator
+       (throw (UnsupportedOperationException. (str "No activator to decorate for " k))))
+
+     (assoc activators k (decorating-activator* k old-activator activator-that-depends-on-original-value))))
+
+  ([activators parent-container k activator-that-depends-on-original-value]
+   (let [old-activator (activators k)
+         new-activator (decorating-activator-from-parent* k parent-container activator-that-depends-on-original-value)]
+
+     (when old-activator
+       (throw (UnsupportedOperationException. (str "There is already an activator for " k " in activators"))))
+
+     (assoc activators k new-activator))))

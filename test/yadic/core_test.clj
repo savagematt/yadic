@@ -198,3 +198,27 @@
     (.close child-container)
 
     @close-was-called => false))
+
+; Decoration
+; ==================================
+
+(fact "Decoration works"
+  (let [activators (-> (->activators :a (constantly "a")
+                                     :b (fn [container] (str "b saw " (:a container))))
+                       (decorate :a (fn [r] (str "decorated " (:a r))))
+                       (decorate :a (fn [r] (str "decorated " (:a r)))))
+        container  (->container activators)]
+    (:a container) => "decorated decorated a"
+    (:b container) => "b saw decorated decorated a"))
+
+(fact "It's possible to decorate a value from a parent container"
+  (let [parent-activators (->activators :a (constantly "hello"))
+        parent-container  (->container parent-activators)
+        child-container   (->container parent-container
+                                       (-> empty-activators
+                                           (decorate parent-container :a (act [a] (str a " world")))
+                                           (decorate :a (act [a] (str a "!!!")))))]
+
+    (:a child-container) => "hello world!!!"))
+
+(future-fact "Destructors still get called on decorated activators")
