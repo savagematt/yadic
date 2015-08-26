@@ -137,41 +137,45 @@
 ; Destructors
 ; ==================================
 
+(defn close-recording
+  [close-was-called-with activator]
+  (let [activator (as-activator activator)]
+
+    (reify
+      Activator
+      (activate [this container]
+        (activate activator container))
+
+      (close [this instance]
+        (swap! close-was-called-with conj instance)
+        (close activator instance)))))
+
 (fact "Activators can specify destructors, which are called when the container is closed"
-  (let [close-was-called-with (atom nil)
+  (let [close-was-called-with (atom [])
         activators            (->activators :a
-                                            (reify
-                                              Activator
-                                              (activate [this container] "the instance")
-                                              (close [this instance]
-                                                (reset! close-was-called-with instance))))
+                                            (close-recording close-was-called-with
+                                              (concrete "the instance")))
         container             (->container activators)]
     (:a container) => "the instance"
     (.close container)
-    @close-was-called-with => "the instance"))
+    @close-was-called-with => ["the instance"]))
 
 (fact "Destructors aren't called if the instance isn't realised"
-  (let [close-was-called (atom false)
-        activators       (->activators :a
-                                       (reify
-                                         Activator
-                                         (activate [this container] "never activated")
-                                         (close [this instance]
-                                           (reset! close-was-called true))))
+  (let [close-order (atom [])
+        activators       (->activators
+                           :a (close-recording close-order
+                                         (concrete "never-activated")))
         container        (->container activators)]
     (.close container)
-    @close-was-called => false))
+    @close-order => []))
 
 (fact "Destructors are called in reverse order of activation"
   (let [close-order (atom [])
         ks          (map (comp keyword str) (range 100))
         activators  (->> ks
                          (map (fn [k]
-                                (reify
-                                  Activator
-                                  (activate [this container] k)
-                                  (close [this instance]
-                                    (swap! close-order conj k)))))
+                                (close-recording close-order
+                                  (concrete k))))
                          (zipmap ks)
                          (->activators))
         container   (->container activators)]
@@ -182,6 +186,28 @@
     (.close container)
 
     @close-order => (reverse ks)))
+
+(fact "Destructors are called in reverse order of activation, even through dependency chains"
+  (let [close-order (atom [])
+        activators  (->activators :a (close-recording close-order
+                                       (act [] "a"))
+                                  :b (close-recording close-order
+                                       (act [a] (str a "b")))
+                                  :c (close-recording close-order
+                                       (act [b] (str b "c")))
+                                  :d (close-recording close-order
+                                       (act [c] (str c "d")))
+                                  :e (close-recording close-order
+                                       (act [d] (str d "e"))))
+        container   (->container activators)]
+
+    (get container :b) => "ab"
+
+    (get container :e) => "abcde"
+
+    (.close container)
+
+    @close-order => ["abcde" "abcd" "abc" "ab" "a"]))
 
 (deftype ACloseableType [closed-atom]
   AutoCloseable
