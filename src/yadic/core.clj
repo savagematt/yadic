@@ -27,7 +27,8 @@
 ; ==================================
 
 (defprotocol Activator
-  (activate [this container]))
+  (activate [this container])
+  (close [this instance]))
 
 ; Functions
 ; ----------------------------------
@@ -36,6 +37,9 @@
   Activator
   (activate [this container]
     (f container))
+  (close [this instance]
+    (when (instance? AutoCloseable instance)
+      (.close instance)))
 
   Object
   (toString [this]
@@ -133,7 +137,10 @@
            (let [value (if-let [activator (get activators k)]
                          (activate* k activator this)
                          (get parent-container k default-value))]
-             (swap! cache-atom assoc-in [:instances k] value)
+             (swap! cache-atom (fn [m]
+                                 (-> m
+                                     (assoc-in [:instances k] value)
+                                     (assoc :creation-order (cons k (:creation-order m))))))
              value))))
 
   (assoc [this key value]
@@ -143,7 +150,23 @@
           (throw (UnsupportedOperationException. "assoc and dissoc are not yet defined for a Container")))
 
   (keys [this]
-        (set (concat (keys parent-container) (keys activators)))))
+        (set (concat (keys parent-container) (keys activators))))
+
+  AutoCloseable
+  (close [this]
+         (locking cache-atom
+           (doseq [k (:creation-order @cache-atom)]
+             (when (contains? activators k)
+               (let [activator         (k activators)
+                     realised-instance (get-in @cache-atom [:instances k])]
+                 (try
+                   (close activator realised-instance)
+                   (catch Exception e
+                     (throw (RuntimeException. (str "Could not close instance " realised-instance " "
+                                                    "for key " k "' "
+                                                    "using activator " (class activator) " " activator "- "
+                                                    (.getMessage e))
+                                               e))))))))))
 
 (defn ->container
   ([activators]

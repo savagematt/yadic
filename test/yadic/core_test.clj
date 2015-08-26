@@ -111,3 +111,90 @@
        :a
        :some-default-value)
   => :some-default-value)
+
+; Destructors
+; ==================================
+
+(fact "Activators can specify destructors, which are called when the container is closed"
+  (let [close-was-called-with (atom nil)
+        activators            (->activators :a
+                                            (reify
+                                              Activator
+                                              (activate [this container] "the instance")
+                                              (close [this instance]
+                                                (reset! close-was-called-with instance))))
+        container             (->container activators)]
+    (:a container) => "the instance"
+    (.close container)
+    @close-was-called-with => "the instance"))
+
+(fact "Destructors aren't called if the instance isn't realised"
+  (let [close-was-called (atom false)
+        activators       (->activators :a
+                                       (reify
+                                         Activator
+                                         (activate [this container] "never activated")
+                                         (close [this instance]
+                                           (reset! close-was-called true))))
+        container        (->container activators)]
+    (.close container)
+    @close-was-called => false))
+
+(fact "Destructors are called in reverse order of activation"
+  (let [close-order (atom [])
+        ks          (map (comp keyword str) (range 100))
+        activators  (->> ks
+                         (map (fn [k]
+                                (reify
+                                  Activator
+                                  (activate [this container] k)
+                                  (close [this instance]
+                                    (swap! close-order conj k)))))
+                         (zipmap ks)
+                         (->activators))
+        container   (->container activators)]
+
+    (doseq [k ks]
+      (get container k))
+
+    (.close container)
+
+    @close-order => (reverse ks)))
+
+(deftype ACloseableType [closed-atom]
+  AutoCloseable
+  (close [this]
+    (reset! closed-atom true)))
+
+(fact "Function activators that produce AutoCloseable instances will close the instance"
+  (let [close-was-called (atom false)
+        activators       (->activators :a (constantly (ACloseableType. close-was-called)))
+        container        (->container activators)]
+    (:a container) => truthy
+    (.close container)
+    @close-was-called => true))
+
+(fact "Container is AutoCloseable, and will be closed when using with-open"
+  (let [close-was-called-with (atom nil)
+        activators            (->activators :a (reify
+                                                 Activator
+                                                 (activate [this container] "the instance")
+                                                 (close [this instance]
+                                                   (reset! close-was-called-with instance))))]
+
+    (with-open [container (->container activators)]
+      (:a container) => "the instance")
+
+    @close-was-called-with => "the instance"))
+
+(fact "Container only closes its own instances, not instances in the parent"
+  (let [close-was-called  (atom false)
+        parent-activators (->activators :a (constantly (ACloseableType. close-was-called)))
+        parent-container  (->container parent-activators)
+        child-container   (->container parent-container empty-activators)]
+
+    (:a child-container) => truthy
+
+    (.close child-container)
+
+    @close-was-called => false))
