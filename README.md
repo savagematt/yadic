@@ -1,4 +1,4 @@
-# yadic-clj
+# yadic
 
 Lazy maps for Clojure. Useful as a dependency injection container, and for other purposes.
 
