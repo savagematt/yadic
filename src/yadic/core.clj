@@ -81,6 +81,52 @@
   ([d] (DerefActivator. d nil nil))
   ([d timeout-ms timeout-val] (DerefActivator. d timeout-ms timeout-val)))
 
+; Classes
+; ----------------------------------
+
+(defn has-param-count [expected]
+  #(= expected (count (.getParameterTypes %))))
+
+(defn types-match [parameter-types]
+  (fn [m]
+    (->> (map vector (.getParameterTypes m) parameter-types) ;zip
+         (every? (fn [[needed got]]
+                   (.isAssignableFrom needed got))))))
+
+(defn get-constructor [c parameter-types]
+  (->> (.getConstructors c)
+       (filter (has-param-count (count parameter-types)))
+       (filter (types-match parameter-types))
+       first))
+
+(deftype ClassActivator [^Class c parameter-keys]
+  Activator
+  (activate [this container]
+    (let [parameters      (map #(get container %) parameter-keys)
+          parameter-types (vec (map #(or (class %) Object) parameters))
+          constructor     (get-constructor c parameter-types)]
+      (when (nil? constructor)
+        (throw (IllegalArgumentException.
+                 (str "No constructor of " c " "
+                      "takes parameter types " parameter-types " "
+                      "from keys " parameter-keys))))
+      (.newInstance ^Constructor constructor (to-array parameters))))
+
+  (close [this instance]
+    (when (instance? AutoCloseable instance)
+      (.close instance)))
+
+  Object
+  (toString [this]
+    (str c " using " parameter-keys)))
+
+(defn class->activator
+  ([^Class c] (class->activator c []))
+  ([^Class c parameter-keys]
+   (when-not (some (has-param-count (count parameter-keys)) (.getConstructors c))
+     (throw (IllegalArgumentException.
+              (str "No constructor of " c " takes " (count parameter-keys) " parameters for keys " parameter-keys))))
+   (ClassActivator. c parameter-keys)))
 
 ; Conversion to activators
 ; ----------------------------------

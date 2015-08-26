@@ -244,3 +244,21 @@
     (:delay container) => "delay"
     (:future container) => "future"
     (:never-returns container) => "timed-out"))
+
+; ClassActivator
+; ==================================
+
+(fact "Class activators call constructors based on keys and the types of the resolved values of those keys"
+  (let [activators  (->activators :values (constantly [1 2 3])
+                                  :array-list (class->activator ArrayList [:values]))
+        container   (->container activators)
+        ; ArrayList has arity 1 constructors for both int and Collection.
+        ; The correct one is picked based on the type of :values
+        constructed (:array-list container)]
+
+    (class constructed) => ArrayList
+    constructed => [1 2 3]))
+
+(fact "You get a helpful early exception at activator creation time if there are no constructors of the right arity"
+  (class->activator ArrayList [:no :matching :constructor :for :this :many])
+  => (throws IllegalArgumentException))
