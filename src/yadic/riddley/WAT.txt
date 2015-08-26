@@ -1,0 +1,3 @@
+Copy-pasted from riddley 0.1.10 in order to produce a zero-dependency library.
+
+With gratitude for the MIT license.

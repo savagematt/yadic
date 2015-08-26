@@ -1,0 +1,3 @@
+Copy-pasted from potemkin 0.4.1 in order to produce a zero-dependency library.
+
+With gratitude for the MIT license.
