@@ -172,6 +172,9 @@
 ; Container
 ; ==================================
 
+(defprotocol IHaveRealisedContent
+  (realised-content* [this]))
+
 (def-map-type NotFoundContainer []
   (get [this k default-value]
        (if default-value
@@ -184,7 +187,14 @@
   (dissoc [this key]
           (throw (UnsupportedOperationException.)))
   (keys [this]
-        #{}))
+        #{})
+
+  IHaveRealisedContent
+  (realised-content* [this] nil)
+
+  Object
+  (toString [this]
+            "Empty Container"))
 
 (def not-found-container
   (NotFoundContainer.))
@@ -220,6 +230,15 @@
 
   (keys [this]
         (set (concat (keys parent-container) (keys activators))))
+
+  IHaveRealisedContent
+  (realised-content* [this]
+                     (:instances @cache-atom))
+
+  Object
+  (toString [this]
+            (str (merge (realised-content* this)
+                   (realised-content* parent-container))))
 
   AutoCloseable
   (close [this]

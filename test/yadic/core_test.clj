@@ -98,6 +98,28 @@
         child-container  (->container parent-container (->activators :b (constantly "b")))]
     (keys child-container) => (contains #{:a :b} :in-any-order)))
 
+; toString
+; ==================================
+
+(fact "toString doesn't instantiate anything and only shows content that has been activated"
+  (let [created          (atom #{})
+        parent-container (->container (->activators :parent-activated
+                                                    (fn [_] (swap! created conj :parent-activated) "parent-activated")
+                                                    :parent-not-activated
+                                                    (fn [_] (swap! created conj :parent-not-activated) "parent-not-activated")))
+        child-container  (->container parent-container
+                                      (->activators :child-activated
+                                                    (fn [_] (swap! created conj :child-activated) "child-activated")
+                                                    :child-not-activated
+                                                    (fn [_] (swap! created conj :child-not-activated) "child-not-activated")))]
+    (child-container :parent-activated)
+    (child-container :child-activated)
+
+    (str child-container)
+    => (str "{:child-activated \"child-activated\", "
+            ":parent-activated \"parent-activated\"}")
+
+    @created => (contains [:parent-activated :child-activated] :in-any-order)))
 
 ; get
 ; ==================================
