@@ -210,17 +210,19 @@
 
 (def-map-type Container [parent-container activators cache-atom]
   (get [this k default-value]
-       (locking cache-atom
-         (if (contains? (:instances @cache-atom) k)
-           (get-in @cache-atom [:instances k])
-           (let [value (if-let [activator (get activators k)]
-                         (activate* k activator this)
-                         (get parent-container k default-value))]
-             (swap! cache-atom (fn [m]
-                                 (-> m
-                                     (assoc-in [:instances k] value)
-                                     (assoc :creation-order (cons k (:creation-order m))))))
-             value))))
+       (if (contains? (:instances @cache-atom) k)
+         (get-in @cache-atom [:instances k])
+         (locking cache-atom
+           (if (contains? (:instances @cache-atom) k)
+             (get-in @cache-atom [:instances k])
+             (let [value (if-let [activator (get activators k)]
+                           (activate* k activator this)
+                           (get parent-container k default-value))]
+               (swap! cache-atom (fn [m]
+                                   (-> m
+                                       (assoc-in [:instances k] value)
+                                       (assoc :creation-order (cons k (:creation-order m))))))
+               value)))))
 
   (assoc [this key value]
     (throw (UnsupportedOperationException. "assoc and dissoc are not yet defined for a Container")))
