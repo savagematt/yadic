@@ -222,3 +222,25 @@
     (:a child-container) => "hello world!!!"))
 
 (future-fact "Destructors still get called on decorated activators")
+
+; Activation using IDeref
+; ==================================
+
+(fact "IDerefs can be used as activators"
+  (let [a-promise  (promise)
+        activators (->activators :atom (atom "atom")
+                                 :promise a-promise
+                                 :delay (delay "delay")
+                                 :future (future "future")
+                                 :never-returns (deref->activator (future (Thread/sleep 100000000))
+                                                                  1
+                                                                  "timed-out"))
+        container  (->container activators)]
+
+    (deliver a-promise "promise")
+
+    (:atom container) => "atom"
+    (:promise container) => "promise"
+    (:delay container) => "delay"
+    (:future container) => "future"
+    (:never-returns container) => "timed-out"))

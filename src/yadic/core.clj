@@ -59,6 +59,28 @@
   (let [container-keys (map (comp keyword #(.getName ^Symbol %)) params)]
     `(fn->activator (fn ~params ~@body) ~(vec container-keys))))
 
+; IDeref
+; ----------------------------------
+
+(deftype DerefActivator [d timeout-ms timeout-val]
+  Activator
+  (activate [this container]
+    (if timeout-ms
+      (deref d timeout-ms timeout-val)
+      @d))
+
+  (close [this instance]
+    (when (instance? AutoCloseable instance)
+      (.close instance)))
+
+  Object
+  (toString [this]
+    (str "DerefActivator using " d)))
+
+(defn deref->activator
+  ([d] (DerefActivator. d nil nil))
+  ([d timeout-ms timeout-val] (DerefActivator. d timeout-ms timeout-val)))
+
 
 ; Conversion to activators
 ; ----------------------------------
@@ -66,6 +88,7 @@
 (defn as-activator [x]
   (cond (fn? x) (fn-activator x)
         (satisfies? Activator x) x
+        (instance? IDeref x) (deref->activator x)
         (nil? x) (throw (IllegalArgumentException. (str "Cannot create activator from nil")))
         true (throw (IllegalArgumentException. (str "Cannot create activator from " (type x) " " x)))))
 
