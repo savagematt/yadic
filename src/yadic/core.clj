@@ -169,7 +169,10 @@
 (defn ->activators
   ([] empty-activators)
   ([m]
-   (Activators. m))
+   (reduce-kv
+     assoc
+     (Activators. {})
+     m))
   ([k activator & keys-and-activators]
    (reduce
      (fn [as [k v]] (assoc as k v))
