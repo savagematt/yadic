@@ -131,9 +131,8 @@
 ; Concrete value
 ; ----------------------------------
 
-
 (defn concrete [instance]
-  (fn->activator (constantly instance) []))
+  (fn-activator (constantly instance)))
 
 ; Conversion to activators
 ; ----------------------------------
