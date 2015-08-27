@@ -162,10 +162,10 @@
 
 (fact "Destructors aren't called if the instance isn't realised"
   (let [close-order (atom [])
-        activators       (->activators
-                           :a (close-recording close-order
-                                         (concrete "never-activated")))
-        container        (->container activators)]
+        activators  (->activators
+                      :a (close-recording close-order
+                           (concrete "never-activated")))
+        container   (->container activators)]
     (.close container)
     @close-order => []))
 
