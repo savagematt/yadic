@@ -66,7 +66,7 @@
                                   [:a]))
   => (throws IllegalArgumentException))
 
-(fact "functions that aren't arity 1 will be rejected"
+(fact "functions that aren't arity 1 (with argument expected to be a container) will be rejected"
   (->activators :a (fn [a b])) => (throws IllegalArgumentException))
 
 (fact "There's a handy macro for creating functions activators"
