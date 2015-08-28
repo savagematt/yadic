@@ -332,3 +332,45 @@
 (fact "You get a helpful early exception at activator creation time if there are no constructors of the right arity"
   (class->activator ArrayList [:no :matching :constructor :for :this :many])
   => (throws IllegalArgumentException))
+
+; Startup activator- useful if your
+; ==================================
+
+(fact "starter-upper activator"
+  (fact "returns a function which eagerly activates keys, in order"
+    (let [activate-order (atom [])
+          activators     (->activators {:a               (act [] (swap! activate-order conj :a))
+                                        :b               (act [] (swap! activate-order conj :b))
+                                        :c               (act [] (swap! activate-order conj :c))
+                                        :never-activated (act [] (swap! activate-order conj :never-activated))
+                                        :startup         (starter-upper :b :a :c)})
+          container      (->container activators)]
+
+      (let [startup (get container :startup)]
+
+        startup => truthy
+
+        @activate-order => []
+
+        (startup) => [:b :a :c]
+
+        @activate-order => [:b :a :c])))
+
+  (fact "does not affect components that have already been activated"
+    (let [activate-order (atom [])
+          activators     (->activators {:a       (act [] (swap! activate-order conj :a))
+                                        :b       (act [] (swap! activate-order conj :b))
+                                        :startup (starter-upper :a :b)})
+          container      (->container activators)]
+
+      (let [_       (get container :b)
+            startup (get container :startup)]
+        (fact ":b is already activated"
+          @activate-order => [:b])
+
+        (fact "startup still returns the keys it will attempt to activate"
+          (startup) => [:a :b])
+
+        (fact "startup still activates :a"
+
+          @activate-order => [:b :a])))))

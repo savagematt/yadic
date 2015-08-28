@@ -134,6 +134,20 @@
 (defn concrete [instance]
   (fn-activator (constantly instance)))
 
+; Startup activator (eagerly activates components)
+; --------------------------------------------------
+
+(defn starter-upper
+  "Eagerly activates components, in order specified, returning the list of keys"
+  [& ks]
+  (fn-activator
+    (fn [container]
+      (fn []
+        (doseq [k ks]
+          (get container k))
+        ks))))
+
+
 ; Conversion to activators
 ; ----------------------------------
 
