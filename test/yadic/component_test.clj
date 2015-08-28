@@ -289,9 +289,11 @@
     nil))
 
 (deftest component-returning-nil
+  "This test has been modified from the original to match yadic's exception behaviour"
   (let [a (->ComponentReturningNil nil)
-        s (component/system-map :a a :b (component-b))
-        e (try (component/start s)
-               false
-               (catch Exception e e))]
-    (is (= ::component/nil-component (:reason (ex-data e))))))
+        s (component/system-map :a a)]
+    (try (component/start s)
+         (is false "Expected exception")
+         (catch UnsupportedOperationException e
+           (is (= "Activator returned nil for :a" (.getMessage e)))))))
+
