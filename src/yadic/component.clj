@@ -16,7 +16,7 @@
                              (zipmap dependencies dependencies))]
       (reify
         yadic/Activator
-        (activate [this container]
+        (activate [_this container]
           (->> dependencies-map
                (map (fn [[alias k]]
                       [alias (get container k)]))
@@ -25,7 +25,7 @@
                  component)
                (start)))
 
-        (close [this instance]
+        (close [_this instance]
           (stop instance))))))
 
 (defn using [component dependencies]
@@ -43,24 +43,25 @@
   (stop [^AutoCloseable this]
     this))
 
-(defn- components->container* [m]
+(defn- system-map->container* [m]
   (yadic/->container
     (reduce-kv
       (fn [as k x]
         (assoc as
-          k (cond (satisfies? yadic/Activator x) x
-                  (satisfies? Lifecycle x) (component->activator x [])
-                  true (throw (UnsupportedOperationException.)))))
+          k (if (satisfies? yadic/Activator x)
+              x
+              (component->activator x []))))
       (yadic/->activators)
       m)))
 
 (defn start-system [system]
-  (yadic/eagerly-instantiate (if (instance? Container system)
-                               system
-                               (components->container* system))))
+  (-> (if (instance? Container system)
+        system
+        (system-map->container* system))
+      (yadic/eagerly-instantiate)))
 
 (defn stop-system [^AutoCloseable system]
   (.close system))
 
 (defn system-map [& keyvals]
-  (components->container* (apply hash-map keyvals)))
+  (system-map->container* (apply hash-map keyvals)))
