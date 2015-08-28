@@ -4,7 +4,7 @@
   (:import [java.util NoSuchElementException UUID]
            [java.lang.reflect Method Constructor]
            [clojure.lang RestFn IDeref Symbol]
-           [java.lang AutoCloseable]))
+           [java.lang AutoCloseable IllegalStateException]))
 
 ; Utils
 ; ==================================
@@ -52,8 +52,9 @@
   (when-not (has-arity f (count container-keys))
     (throw (IllegalArgumentException. (str "Function is not arity " (count container-keys) ". Cannot create using keys " container-keys " " f))))
 
-  (fn [container]
-    (apply f (map container container-keys))))
+  (fn-activator
+    (fn [container]
+      (apply f (map container container-keys)))))
 
 (defmacro act [params & body]
   (let [container-keys (map (comp keyword #(.getName ^Symbol %)) params)]
@@ -329,7 +330,7 @@
          old-activator (activators k)]
 
      (when-not old-activator
-       (throw (UnsupportedOperationException. (str "No activator to decorate for " k))))
+       (throw (IllegalStateException. (str "No activator to decorate for " k))))
 
      (assoc activators
        decorated-key old-activator

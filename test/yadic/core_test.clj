@@ -56,8 +56,8 @@
   (let [activators (->activators
                      :a (constantly 3)
                      :b (constantly 5)
-                     :c (fn->activator (fn [a b] (* a b))
-                                       [:a :b]))
+                     :c (-> (fn [x y] (* x y))
+                            (fn->activator [:a :b])))
         container  (->container activators)]
     (:c container) => 15))
 
@@ -67,25 +67,27 @@
   => (throws IllegalArgumentException))
 
 (fact "functions that aren't arity 1 (with argument expected to be a container) will be rejected"
-  (->activators :a (fn [a b])) => (throws IllegalArgumentException))
+  (->activators :a (fn [a b]))
+  => (throws IllegalArgumentException))
 
 (fact "There's a handy macro for creating functions activators"
   (-> (->activators :a (act [b] (str "hello " b))
                     :b (constantly "world"))
       (->container)
-      (:a)) => "hello world")
+      (:a))
+  => "hello world")
 
 ; Keys
 ; ==================================
 
-(fact "Calling keys doesn't instantiate anything"
+(fact "Calling (keys container) doesn't instantiate anything"
   (let [a-created  (atom false)
         activators (->activators :a (fn [_] (reset! a-created true) "A"))
         container  (->container activators)]
     (keys container) => [:a]
     @a-created => false))
 
-(fact "Calling contains? doesn't instantiate anything"
+(fact "Calling (contains? container k) doesn't instantiate anything"
   (let [a-created  (atom false)
         activators (->activators :a (fn [_] (reset! a-created true) "A"))
         container  (->container activators)]
@@ -124,7 +126,7 @@
 ; get
 ; ==================================
 
-(fact "will return default value from get if key is not found"
+(fact "get will return default value if key is not found"
   (get (->container empty-activators) :a :some-default-value)
   => :some-default-value
 
@@ -236,36 +238,46 @@
     @close-was-called-with => "the instance"))
 
 (fact "Container only closes its own instances, not instances in the parent"
-  (let [close-was-called  (atom false)
-        parent-activators (->activators :a (constantly (ACloseableType. close-was-called)))
-        parent-container  (->container parent-activators)
-        child-container   (->container parent-container empty-activators)]
+  (let [parent-instance-was-closed (atom false)
+        parent-activators          (->activators :a (constantly (ACloseableType. parent-instance-was-closed)))
+        parent-container           (->container parent-activators)
+        child-container            (->container parent-container empty-activators)]
 
     (:a child-container) => truthy
 
     (.close child-container)
 
-    @close-was-called => false))
+    @parent-instance-was-closed => false))
 
 ; Decoration
 ; ==================================
 
-(fact "Decoration works"
+(fact "(decorate) allows us to add activators which wrap instances created by activators with the same key"
   (let [activators (-> (->activators :a (constantly "a")
                                      :b (fn [container] (str "b saw " (:a container))))
-                       (decorate :a (fn [r] (str "decorated " (:a r))))
-                       (decorate :a (fn [r] (str "decorated " (:a r)))))
+                       (decorate :a (fn [r] (str "(decorated-once " (:a r) ")")))
+                       (decorate :a (fn [r] (str "(decorated-twice " (:a r) ")"))))
         container  (->container activators)]
-    (:a container) => "decorated decorated a"
-    (:b container) => "b saw decorated decorated a"))
+    (:a container) => "(decorated-twice (decorated-once a))"
+    (:b container) => "b saw (decorated-twice (decorated-once a))"))
 
-(fact "It's possible to decorate a value from a parent container"
+(fact "You can't decorate a key which is not already in activators"
+  (-> (->activators)
+      (decorate :a (fn [_])))
+  => (throws IllegalStateException))
+
+(fact  {:midje/description (str "If you have a reference to the parent container, it's possible to decorate a key from "
+                                "the parent container. "
+                                "This type of decoration is impossible without a reference to the parent container")}
+
   (let [parent-activators (->activators :a (constantly "hello"))
         parent-container  (->container parent-activators)
         child-container   (->container parent-container
                                        (-> empty-activators
-                                           (decorate parent-container :a (act [a] (str a " world")))
-                                           (decorate :a (act [a] (str a "!!!")))))]
+                                           (decorate parent-container :a
+                                                     (act [a] (str a " world")))
+                                           (decorate :a
+                                                     (act [a] (str a "!!!")))))]
 
     (:a child-container) => "hello world!!!"))
 
@@ -278,6 +290,7 @@
                                        "hello")
                                      (close [this instance]
                                        (swap! close-called-with conj instance))))
+
                               (decorate :a (reify
                                              Activator
                                              (activate [this {:keys [a]}]
@@ -336,7 +349,7 @@
 ; starter-upper activator-
 ; useful if you have components without
 ; explicit dependencies which require
-; activation in a particuar order
+; activation in a particular order
 ; ==================================
 
 (fact "starter-upper activator"
