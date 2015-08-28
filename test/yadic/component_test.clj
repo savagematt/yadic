@@ -154,7 +154,7 @@
 
 (defrecord ErrorStartComponentC [state error a b]
   component/Lifecycle
-  (start [this]
+  (start [_this]
     (throw error))
   (stop [this]
     this))
@@ -230,31 +230,35 @@
   (let [system (component/start (system-2))]
     (is (started? (get-in system [:beta :one :d :my-c])))))
 
-(defn increment-all-components [system]
-  (component/update-system
-    system (keys system) update-in [:n] inc))
+(str "We don't support update-system. It's not something that fits in yadic's world."
+     "Instances in a yadic Container are not expected to be homogenous. They're just objects,"
+     "and not expected to all be maps, or all be Lifecyle, or whatever. So performing the"
+     "same operation on every instance doesn't make sense.")
+#_((defn increment-all-components [system]
+    (component/update-system
+      system (keys system) update-in [:n] inc))
 
-(defn assert-increments [system]
-  (are [n keys] (= n (get-in system keys))
-                11 [:a :n]
-                11 [:b :a :n]
-                11 [:c :a :n]
-                11 [:c :b :a :n]
-                11 [:e :d :b :a :n]
-                21 [:b :n]
-                21 [:c :b :n]
-                21 [:d :b :n]
-                31 [:c :n]
-                41 [:d :n]
-                51 [:e :n]))
+  (defn assert-increments [system]
+    (are [n keys] (= n (get-in system keys))
+                  11 [:a :n]
+                  11 [:b :a :n]
+                  11 [:c :a :n]
+                  11 [:c :b :a :n]
+                  11 [:e :d :b :a :n]
+                  21 [:b :n]
+                  21 [:c :b :n]
+                  21 [:d :b :n]
+                  31 [:c :n]
+                  41 [:d :n]
+                  51 [:e :n]))
 
-(deftest update-with-custom-function-on-maps
-  (let [system {:a {:n 10}
-                :b (component/using {:n 20} [:a])
-                :c (component/using {:n 30} [:a :b])
-                :d (component/using {:n 40} [:a :b])
-                :e (component/using {:n 50} [:b :c :d])}]
-    (assert-increments (increment-all-components system))))
+  (deftest update-with-custom-function-on-maps
+    (let [system {:a {:n 10}
+                  :b (component/using {:n 20} [:a])
+                  :c (component/using {:n 30} [:a :b])
+                  :d (component/using {:n 40} [:a :b])
+                  :e (component/using {:n 50} [:b :c :d])}]
+      (assert-increments (increment-all-components system)))))
 
 (deftest t-system-using
   (let [dependency-map {:b [:a]
