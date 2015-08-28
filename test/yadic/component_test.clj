@@ -172,43 +172,45 @@
           (assoc (system-1) :c (error-start-c error)))
         (catch Exception e e))))
 
-(deftest error-thrown-with-partial-system
-  (let [ex (setup-error)]
-    (is (started? (-> ex ex-data :system :b :a)))))
+"Yadic throws less structured errors than Component"
+#_(
+    (deftest error-thrown-with-partial-system
+   (let [ex (setup-error)]
+     (is (started? (-> ex ex-data :system :b :a)))))
 
-(deftest error-thrown-with-component-dependencies
-  (let [ex (setup-error)]
-    (is (started? (-> ex ex-data :component :a)))
-    (is (started? (-> ex ex-data :component :b)))))
+  (deftest error-thrown-with-component-dependencies
+    (let [ex (setup-error)]
+      (is (started? (-> ex ex-data :component :a)))
+      (is (started? (-> ex ex-data :component :b)))))
 
-(deftest error-thrown-with-cause
-  (let [error (ex-info "Boom!" {})
-        ex (setup-error error)]
-    (is (identical? error (.getCause ^Exception ex)))))
+  (deftest error-thrown-with-cause
+    (let [error (ex-info "Boom!" {})
+          ex    (setup-error error)]
+      (is (identical? error (.getCause ^Exception ex)))))
 
-(deftest error-is-from-component
-  (let [error (ex-info "Boom!" {})
-        ex (setup-error error)]
-    (is (component/ex-component? ex))))
+  (deftest error-is-from-component
+    (let [error (ex-info "Boom!" {})
+          ex    (setup-error error)]
+      (is (component/ex-component? ex))))
 
-(deftest error-is-not-from-component
-  (is (not (component/ex-component? (ex-info "Boom!" {})))))
+  (deftest error-is-not-from-component
+    (is (not (component/ex-component? (ex-info "Boom!" {})))))
 
-(deftest remove-components-from-error
-  (let [error (ex-info (str (rand-int Integer/MAX_VALUE)) {})
-        ^Exception ex (setup-error error)
-        ^Exception ex-without (component/ex-without-components ex)]
-    (is (contains? (ex-data ex) :component))
-    (is (contains? (ex-data ex) :system))
-    (is (not (contains? (ex-data ex-without) :component)))
-    (is (not (contains? (ex-data ex-without) :system)))
-    (is (= (.getMessage ex)
-           (.getMessage ex-without)))
-    (is (= (.getCause ex)
-           (.getCause ex-without)))
-    (is (java.util.Arrays/equals
-          (.getStackTrace ex)
-          (.getStackTrace ex-without)))))
+  (deftest remove-components-from-error
+    (let [error                 (ex-info (str (rand-int Integer/MAX_VALUE)) {})
+          ^Exception ex         (setup-error error)
+          ^Exception ex-without (component/ex-without-components ex)]
+      (is (contains? (ex-data ex) :component))
+      (is (contains? (ex-data ex) :system))
+      (is (not (contains? (ex-data ex-without) :component)))
+      (is (not (contains? (ex-data ex-without) :system)))
+      (is (= (.getMessage ex)
+             (.getMessage ex-without)))
+      (is (= (.getCause ex)
+             (.getCause ex-without)))
+      (is (java.util.Arrays/equals
+            (.getStackTrace ex)
+            (.getStackTrace ex-without))))))
 
 (defrecord System2b [one]
   component/Lifecycle
