@@ -48,6 +48,10 @@
         container  (->container activators)]
     (:b container) => 15))
 
+(fact "For our own good, we don't allow activators to return nil because it's not necessary and it results in confusing stacktraces"
+  (let [activators (->activators :a (constantly nil))]
+    (get (->container activators) :a) => (throws UnsupportedOperationException #"nil.*\:a")))
+
 
 ; Activation using functions
 ; ==================================

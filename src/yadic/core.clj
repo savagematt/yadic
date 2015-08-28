@@ -252,6 +252,8 @@
              (let [value (if-let [activator (get activators k)]
                            (activate* k activator this)
                            (get parent-container k default-value))]
+               (when (nil? value)
+                 (throw (UnsupportedOperationException. (str "Activator returned nil for " k))))
                (swap! cache-atom (fn [m]
                                    (-> m
                                        (assoc-in [:instances k] value)
