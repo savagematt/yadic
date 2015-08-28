@@ -102,7 +102,7 @@
 (defn component-e []
   (map->ComponentE {:state (rand-int Integer/MAX_VALUE)}))
 
-(defrecord System1 [d a e c b]  ; deliberately scrambled order
+(defrecord System1 [d a e c b]                              ; deliberately scrambled order
   component/Lifecycle
   (start [this]
     (log 'System1.start this)
@@ -116,7 +116,7 @@
                  :b (component-b)
                  :c (component-c)
                  :d (component/using (component-d)
-                                     {:b :b
+                                     {:b    :b
                                       :my-c :c})
                  :e (component-e)}))
 
@@ -172,45 +172,44 @@
           (assoc (system-1) :c (error-start-c error)))
         (catch Exception e e))))
 
-"Yadic throws less structured errors than Component"
-#_(
-    (deftest error-thrown-with-partial-system
-   (let [ex (setup-error)]
-     (is (started? (-> ex ex-data :system :b :a)))))
+(str "Yadic throws less structured errors than Component"
+     #_(deftest error-thrown-with-partial-system
+         (let [ex (setup-error)]
+           (is (started? (-> ex ex-data :system :b :a)))))
 
-  (deftest error-thrown-with-component-dependencies
-    (let [ex (setup-error)]
-      (is (started? (-> ex ex-data :component :a)))
-      (is (started? (-> ex ex-data :component :b)))))
+     #_(deftest error-thrown-with-component-dependencies
+         (let [ex (setup-error)]
+           (is (started? (-> ex ex-data :component :a)))
+           (is (started? (-> ex ex-data :component :b)))))
 
-  (deftest error-thrown-with-cause
-    (let [error (ex-info "Boom!" {})
-          ex    (setup-error error)]
-      (is (identical? error (.getCause ^Exception ex)))))
+     #_(deftest error-thrown-with-cause
+         (let [error (ex-info "Boom!" {})
+               ex    (setup-error error)]
+           (is (identical? error (.getCause ^Exception ex)))))
 
-  (deftest error-is-from-component
-    (let [error (ex-info "Boom!" {})
-          ex    (setup-error error)]
-      (is (component/ex-component? ex))))
+     #_(deftest error-is-from-component
+         (let [error (ex-info "Boom!" {})
+               ex    (setup-error error)]
+           (is (component/ex-component? ex))))
 
-  (deftest error-is-not-from-component
-    (is (not (component/ex-component? (ex-info "Boom!" {})))))
+     #_(deftest error-is-not-from-component
+         (is (not (component/ex-component? (ex-info "Boom!" {})))))
 
-  (deftest remove-components-from-error
-    (let [error                 (ex-info (str (rand-int Integer/MAX_VALUE)) {})
-          ^Exception ex         (setup-error error)
-          ^Exception ex-without (component/ex-without-components ex)]
-      (is (contains? (ex-data ex) :component))
-      (is (contains? (ex-data ex) :system))
-      (is (not (contains? (ex-data ex-without) :component)))
-      (is (not (contains? (ex-data ex-without) :system)))
-      (is (= (.getMessage ex)
-             (.getMessage ex-without)))
-      (is (= (.getCause ex)
-             (.getCause ex-without)))
-      (is (java.util.Arrays/equals
-            (.getStackTrace ex)
-            (.getStackTrace ex-without))))))
+     #_(deftest remove-components-from-error
+         (let [error                 (ex-info (str (rand-int Integer/MAX_VALUE)) {})
+               ^Exception ex         (setup-error error)
+               ^Exception ex-without (component/ex-without-components ex)]
+           (is (contains? (ex-data ex) :component))
+           (is (contains? (ex-data ex) :system))
+           (is (not (contains? (ex-data ex-without) :component)))
+           (is (not (contains? (ex-data ex-without) :system)))
+           (is (= (.getMessage ex)
+                  (.getMessage ex-without)))
+           (is (= (.getCause ex)
+                  (.getCause ex-without)))
+           (is (java.util.Arrays/equals
+                 (.getStackTrace ex)
+                 (.getStackTrace ex-without))))))
 
 (defrecord System2b [one]
   component/Lifecycle
@@ -233,46 +232,47 @@
 (str "We don't support update-system. It's not something that fits in yadic's world."
      "Instances in a yadic Container are not expected to be homogenous. They're just objects,"
      "and not expected to all be maps, or all be Lifecyle, or whatever. So performing the"
-     "same operation on every instance doesn't make sense.")
-#_((defn increment-all-components [system]
-    (component/update-system
-      system (keys system) update-in [:n] inc))
+     "same operation on every instance doesn't make sense."
+     #_(defn increment-all-components [system]
+         (component/update-system
+           system (keys system) update-in [:n] inc))
 
-  (defn assert-increments [system]
-    (are [n keys] (= n (get-in system keys))
-                  11 [:a :n]
-                  11 [:b :a :n]
-                  11 [:c :a :n]
-                  11 [:c :b :a :n]
-                  11 [:e :d :b :a :n]
-                  21 [:b :n]
-                  21 [:c :b :n]
-                  21 [:d :b :n]
-                  31 [:c :n]
-                  41 [:d :n]
-                  51 [:e :n]))
+     #_(defn assert-increments [system]
+         (are [n keys] (= n (get-in system keys))
+                       11 [:a :n]
+                       11 [:b :a :n]
+                       11 [:c :a :n]
+                       11 [:c :b :a :n]
+                       11 [:e :d :b :a :n]
+                       21 [:b :n]
+                       21 [:c :b :n]
+                       21 [:d :b :n]
+                       31 [:c :n]
+                       41 [:d :n]
+                       51 [:e :n]))
 
-  (deftest update-with-custom-function-on-maps
-    (let [system {:a {:n 10}
-                  :b (component/using {:n 20} [:a])
-                  :c (component/using {:n 30} [:a :b])
-                  :d (component/using {:n 40} [:a :b])
-                  :e (component/using {:n 50} [:b :c :d])}]
-      (assert-increments (increment-all-components system)))))
+     #_(deftest update-with-custom-function-on-maps
+         (let [system {:a {:n 10}
+                       :b (component/using {:n 20} [:a])
+                       :c (component/using {:n 30} [:a :b])
+                       :d (component/using {:n 40} [:a :b])
+                       :e (component/using {:n 50} [:b :c :d])}]
+           (assert-increments (increment-all-components system)))))
 
-(str "I don't propose to implement system-using")
-#_((deftest t-system-using
-   (let [dependency-map {:b [:a]
-                         :c [:a :b]
-                         :d {:a :a :b :b}
-                         :e [:b :c :d]}
-         system         {:a {:n 10}
-                         :b {:n 20}
-                         :c {:n 30}
-                         :d {:n 40}
-                         :e {:n 50}}
-         system         (component/system-using system dependency-map)]
-     (assert-increments (increment-all-components system)))))
+
+(str "I don't propose to implement system-using"
+     #_(deftest t-system-using
+         (let [dependency-map {:b [:a]
+                               :c [:a :b]
+                               :d {:a :a :b :b}
+                               :e [:b :c :d]}
+               system         {:a {:n 10}
+                               :b {:n 20}
+                               :c {:n 30}
+                               :d {:n 40}
+                               :e {:n 50}}
+               system         (component/system-using system dependency-map)]
+           (assert-increments (increment-all-components system)))))
 
 (defrecord ComponentWithoutLifecycle [state])
 
