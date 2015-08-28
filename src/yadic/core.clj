@@ -147,6 +147,16 @@
           (get container k))
         ks))))
 
+(defn eagerly-instantiate
+  "Eagerly activates all components in the container.
+
+  Returns the container."
+  [container]
+  (reduce (fn [container k]
+            (get container k)
+            container)
+          container
+          (keys container)))
 
 ; Conversion to activators
 ; ----------------------------------

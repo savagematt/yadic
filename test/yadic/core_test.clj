@@ -333,7 +333,10 @@
   (class->activator ArrayList [:no :matching :constructor :for :this :many])
   => (throws IllegalArgumentException))
 
-; Startup activator- useful if your
+; starter-upper activator-
+; useful if you have components without
+; explicit dependencies which require
+; activation in a particuar order
 ; ==================================
 
 (fact "starter-upper activator"
@@ -374,3 +377,14 @@
         (fact "startup still activates :a"
 
           @activate-order => [:b :a])))))
+
+; eagerly-instantiate
+; ==================================
+
+(fact "We can eagerly instantiate everything in a container (which rather defeats the purpose of yadic, but still...)"
+  (let [activate-order (atom [])
+        container      (->container (->activators {:a (act [] (swap! activate-order conj :a))}))]
+
+    (eagerly-instantiate container)
+
+    @activate-order => [:a]))
